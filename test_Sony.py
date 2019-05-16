@@ -1,26 +1,35 @@
 # uniform content loss + adaptive threshold + per_class_input + recursive G
 # improvement upon cqf37
 from __future__ import division
-import os, scipy.io
+import os, scipy.io, time, sys
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import numpy as np
 import rawpy
 import glob
 
-input_dir = './dataset/Sony/short/'
-gt_dir = './dataset/Sony/long/'
+sony_dir = "/ssd1/night_photo_enhancer/dataset/Sony"
+input_dir = os.path.join(sony_dir, "short")
+gt_dir = os.path.join(sony_dir, "long")
 checkpoint_dir = './checkpoint/Sony/'
 result_dir = './result_Sony/'
 
 # get test IDs
 test_fns = glob.glob(gt_dir + '/1*.ARW')
 test_ids = [int(os.path.basename(test_fn)[0:5]) for test_fn in test_fns]
+print("len(test_ids)", len(test_ids))
+for i in [10034, 10045, 10172]: # blacklist
+    test_ids.remove(i)
+print("len(test_ids)", len(test_ids))
 
 DEBUG = 0
 if DEBUG == 1:
     save_freq = 2
     test_ids = test_ids[0:5]
+
+
+def get_current_time():
+    return str(time.strftime("%Y%m%d_%H%M%S"))
 
 
 def lrelu(x):
@@ -111,14 +120,14 @@ if ckpt:
 if not os.path.isdir(result_dir + 'final/'):
     os.makedirs(result_dir + 'final/')
 
-for test_id in test_ids:
+print()
+for test_index, test_id in enumerate(test_ids):
     # test the first image in each sequence
-    in_files = glob.glob(input_dir + '%05d_00*.ARW' % test_id)
-    for k in range(len(in_files)):
-        in_path = in_files[k]
+    in_files = glob.glob(os.path.join(input_dir, '%05d_00*.ARW' % test_id))
+    for in_index, in_path in enumerate(in_files):
         in_fn = os.path.basename(in_path)
-        print(in_fn)
-        gt_files = glob.glob(gt_dir + '%05d_00*.ARW' % test_id)
+        print("\rTesting %d/%d %d/%d  %20s" % (test_index+1, len(test_ids), in_index+1, len(in_files), in_fn), end=""), sys.stdout.flush()
+        gt_files = glob.glob(os.path.join(gt_dir, '%05d_00*.ARW' % test_id))
         gt_path = gt_files[0]
         gt_fn = os.path.basename(gt_path)
         in_exposure = float(in_fn[9:-5])
@@ -149,7 +158,9 @@ for test_id in test_ids:
 
         scipy.misc.toimage(output * 255, high=255, low=0, cmin=0, cmax=255).save(
             result_dir + 'final/%5d_00_%d_out.png' % (test_id, ratio))
-        scipy.misc.toimage(scale_full * 255, high=255, low=0, cmin=0, cmax=255).save(
-            result_dir + 'final/%5d_00_%d_scale.png' % (test_id, ratio))
+        # scipy.misc.toimage(scale_full * 255, high=255, low=0, cmin=0, cmax=255).save(
+        #     result_dir + 'final/%5d_00_%d_scale.png' % (test_id, ratio))
         scipy.misc.toimage(gt_full * 255, high=255, low=0, cmin=0, cmax=255).save(
             result_dir + 'final/%5d_00_%d_gt.png' % (test_id, ratio))
+    print()
+
