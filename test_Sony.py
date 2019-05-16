@@ -12,14 +12,17 @@ sony_dir = "/ssd1/night_photo_enhancer/dataset/Sony"
 input_dir = os.path.join(sony_dir, "short")
 gt_dir = os.path.join(sony_dir, "long")
 checkpoint_dir = './checkpoint/Sony/'
-result_dir = './result_Sony/'
+mode = "val"
+# mode = "test"
+result_dir = './result_Sony_%s/' % (mode)
 
 # get test IDs
-test_fns = glob.glob(gt_dir + '/1*.ARW')
+test_fns = glob.glob(os.path.join(gt_dir, '1*.ARW' if mode == "test" else '2*.ARW'))
 test_ids = [int(os.path.basename(test_fn)[0:5]) for test_fn in test_fns]
 print("len(test_ids)", len(test_ids))
 for i in [10034, 10045, 10172]: # blacklist
-    test_ids.remove(i)
+    if i in test_ids:
+        test_ids.remove(i)
 print("len(test_ids)", len(test_ids))
 
 DEBUG = 0
